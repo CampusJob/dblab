@@ -10,9 +10,9 @@ setuptools.setup(
 
     description="DatabaseLab API wrapper",
 
-    url='https://github.com/olivierpilotte/dblab',
+    url='https://github.com/campus/dblab',
     author='Olivier Pilotte',
-    author_email='olivierpilotte@gmail.com',
+    author_email='opilotte@wayup.com',
     license='Apache Licence v2.0',
 
     packages=setuptools.find_packages(exclude=['docs', 'tests*']),
