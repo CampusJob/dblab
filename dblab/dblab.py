@@ -31,9 +31,11 @@ class DatabaseLab:
         if response.status_code != 200:
             raise Exception("database [{database_id}] not found")
 
-        logging.debug(json.dumps(response.json(), indent=2))
-
         return munch.Munch.fromDict(response.json())
+
+    def list_databases(self):
+        response = requests.get(f"{self.dblab_url}/status", headers=self.headers)
+        return munch.Munch.fromDict(response.json()["clones"])
 
     def create_database(self, database_id, username, password):
         payload = {
@@ -57,8 +59,6 @@ class DatabaseLab:
             logging.info(f"database [{database_id}] not found, creating...")
 
         response = requests.post(f"{self.dblab_url}/clone", data=json.dumps(payload), headers=self.headers)
-        logging.debug(json.dumps(response.json(), indent=2))
-
         if response.status_code != 201:
             raise Exception(f"failed to create database [{database_id}]")
 
@@ -105,7 +105,7 @@ class DatabaseLab:
             with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
                 sock.settimeout(1)
 
-                if sock.connect_ex((host, port)) == 0:
+                if sock.connect_ex((host, int(port))) == 0:
                     return True
                 else:
                     logging.warning(f"{host}:{port} not yet reachable")
@@ -115,12 +115,12 @@ class DatabaseLab:
 
         raise Exception(f"database not reachable at [{host}:{port}]")
 
-    def update_ownership(self, db_url, username, password, db_name):
+    def update_ownership(self, db_url, db_port, db_name, username, password):
         with psycopg2.connect(host=db_url,
+                              port=db_port,
+                              database=db_name,
                               password=password,
-                              user=username,
-                              port="5432",
-                              database=db_name) as connection:
+                              user=username) as connection:
 
             connection.autocommit = True
             with connection.cursor() as cursor:
@@ -134,7 +134,7 @@ class DatabaseLab:
                         query = f"SET search_path = {schema}; ALTER TABLE {table_name} OWNER TO {username}"
                         cursor.execute(query)
 
-    def analyze(self, db_url, username, password, db_name):
+    def analyze(self, db_url, db_name, db_port, username, password):
 
         def run_analyze(table_name, connection):
             with connection.cursor() as cursor:
@@ -142,10 +142,10 @@ class DatabaseLab:
 
         with ThreadPoolExecutor(max_workers=10) as executor:
             with psycopg2.connect(host=db_url,
+                                  port=db_port,
+                                  database=db_name,
                                   password=password,
-                                  user=username,
-                                  port="5432",
-                                  database=db_name) as connection:
+                                  user=username) as connection:
 
                 connection.autocommit = True
                 with connection.cursor() as cursor:
